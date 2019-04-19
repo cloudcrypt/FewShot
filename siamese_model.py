@@ -24,7 +24,7 @@ class SiameseNetwork(nn.Module) :
     def forward_one(self, x):
         x = self.conv(x)
         x = x.view(x.size()[0], -1)
-        x = self.linear(x)
+        x = self.features(x)
         return x
     def forward(self, image1, image2):
         out1 = self.forward_one(image1)
