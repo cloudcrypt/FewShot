@@ -36,6 +36,9 @@ if __name__ == '__main__':
     support_set_size = 20
     model_name = 'Siamese_Network'
     model = SiameseNetwork()
+    if torch.cuda.is_available():
+        model.cuda()
+
     optimizer = optim.Adam(model.parameters(), lr=10e-4, weight_decay=0.0001)
 
     model.train()
