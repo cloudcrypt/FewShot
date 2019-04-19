@@ -80,6 +80,10 @@ class Meta(nn.Module):
 
             # 1. run the i-th task and compute loss for k=0
             logits = self.net(x_spt[i], vars=None, bn_training=True)
+            print(x_spt.size())
+            # print(logits.size())
+            print(y_spt[i])
+            print(logits)
             loss = F.cross_entropy(logits, y_spt[i])
             grad = torch.autograd.grad(loss, self.net.parameters())
             fast_weights = list(map(lambda p: p[1] - self.update_lr * p[0], zip(grad, self.net.parameters())))

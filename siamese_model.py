@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class SiameseNetwork(nn.Module) :
-    def __init__(self, batch_size):
+    def __init__(self):
         super(SiameseNetwork,self).__init__()
 
         self.conv = nn.Sequential(
@@ -26,6 +26,7 @@ class SiameseNetwork(nn.Module) :
         x = x.view(x.size()[0], -1)
         x = self.features(x)
         return x
+
     def forward(self, image1, image2):
         out1 = self.forward_one(image1)
         out2 = self.forward_one(image2)
