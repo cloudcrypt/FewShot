@@ -40,6 +40,7 @@ if __name__ == '__main__':
         model.cuda()
 
     optimizer = optim.Adam(model.parameters(), lr=10e-4, weight_decay=0.0001)
+    loss_fn = torch.nn.BCEWithLogitsLoss(size_average=True)
 
     model.train()
     for iteration in range(number_of_iterations):
@@ -48,7 +49,7 @@ if __name__ == '__main__':
         output = model(to_torch_to_var(images[0]), to_torch_to_var(images[1]))
 
         optimizer.zero_grad()
-        loss_fn = nn.BCELoss()
+
         train_loss = loss_fn(output, labels)
         train_loss.backward()
         optimizer.step()
