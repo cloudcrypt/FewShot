@@ -12,8 +12,8 @@ def accuracy(output, target):
     """Computes the accuracy for multiple binary predictions"""
     pred = output >= 0.5
     truth = target >= 0.5
-    acc = pred.eq(truth).sum() / target.numel()
-    return acc
+    acc = pred.eq(truth).float().mean()
+    return np.asscalar(to_data(acc))
 
 if __name__ == '__main__':
 
