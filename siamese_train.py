@@ -56,8 +56,9 @@ if __name__ == '__main__':
         train_accuracy = accuracy(output, labels)
 
         # validation set
-        print('Iteration %d/%d: Train loss: %f, Train Accuracy: %f' %
-              (iteration + 1, number_of_iterations, train_loss, train_accuracy))
+        if iteration % 100 == 0:
+            print('Iteration %d/%d: Train loss: %f, Train Accuracy: %f' %
+                 (iteration + 1, number_of_iterations, train_loss, train_accuracy))
 
         # Each 100 iterations perform a one_shot_task and write to tensorboard the
         # stored losses and accuracies
