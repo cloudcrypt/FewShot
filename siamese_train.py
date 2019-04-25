@@ -31,9 +31,12 @@ if __name__ == '__main__':
     gflags.DEFINE_integer("save_every", 100, "save model after each save_every iter.")
     gflags.DEFINE_integer("test_every", 5, "test model after each test_every iter.")
     gflags.DEFINE_integer("max_iter", 50000, "number of iterations before stopping")
-    gflags.DEFINE_string("model_path", "/home/data/pin/model/siamese", "path to store model")
+    gflags.DEFINE_string("model_path", "model/siamese", "path to store model")
 
     Flags(sys.argv)
+
+    if not os.path.exists(Flags.model_path):
+        os.makedirs(Flags.model_path)
 
     data_transforms = transforms.Compose([
         transforms.RandomAffine(15),
