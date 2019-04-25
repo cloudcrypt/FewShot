@@ -8,6 +8,8 @@ import random
 import torchvision.datasets as dset
 from PIL import Image
 import errno
+from helpers import *
+from torchvision import transforms
 
 class OmniglotLoader:
     urls = [
@@ -153,20 +155,27 @@ class OmniglotTest(Dataset):
         return datas, idx
 
     def get_one_shot_batch(self):
+        if self.transform is None:
+            transf = transforms.ToTensor()
+        else:
+            transf = self.transform
+
         images1 = torch.zeros(self.way+1, 1, self.image_width, self.image_height)
 
         test_class = random.randint(0, self.num_classes - 1)
-        test_image = random.choice(self.datas[test_class])
+        image_indices = random.sample(range(0, len(self.datas[test_class])), 2)
 
-        images1[0] = test_image
+        test_image = transf(self.datas[test_class][image_indices[0]])
+
+        images1[0] = transf(self.datas[test_class][image_indices[1]])
 
         available_classes = list(range(0, self.num_classes))
         available_classes.remove(test_class)
 
         different_classes = random.sample(range(0, len(available_classes)), self.way)
 
-        for img_idx, idx in zip(different_classes, range(1, self.way+1)):
-            images1[img_idx] = self.datas[idx]
+        for idx, img_idx in zip(different_classes, range(1, self.way+1)):
+            images1[img_idx] = transf(random.choice(self.datas[idx]))
 
         images2 = torch.zeros(1, 1, self.image_width, self.image_height)
         images2[0] = test_image

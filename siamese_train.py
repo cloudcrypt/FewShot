@@ -29,11 +29,14 @@ if __name__ == '__main__':
     gflags.DEFINE_float("lr", 0.00006, "learning rate")
     gflags.DEFINE_integer("show_every", 10, "show result after each show_every iter.")
     gflags.DEFINE_integer("save_every", 100, "save model after each save_every iter.")
-    gflags.DEFINE_integer("test_every", 5, "test model after each test_every iter.")
+    gflags.DEFINE_integer("test_every", 100, "test model after each test_every iter.")
     gflags.DEFINE_integer("max_iter", 50000, "number of iterations before stopping")
-    gflags.DEFINE_string("model_path", "/home/data/pin/model/siamese", "path to store model")
+    gflags.DEFINE_string("model_path", "model/siamese", "path to store model")
 
     Flags(sys.argv)
+
+    if not os.path.exists(Flags.model_path):
+        os.makedirs(Flags.model_path)
 
     data_transforms = transforms.Compose([
         transforms.RandomAffine(15),
@@ -82,7 +85,7 @@ if __name__ == '__main__':
             torch.save(net.state_dict(), Flags.model_path + '/model-inter-' + str(batch_id+1) + ".pt")
         if batch_id % Flags.test_every == 0:
             global_accuracy = 0.0
-            for i in range(0, 20):
+            for i in range(0, 800):
                 img1, img2 = testSet.get_one_shot_batch()
                 img1, img2 = to_var(img1), to_var(img2)
                 output = net.forward(img1, img2)
@@ -92,7 +95,7 @@ if __name__ == '__main__':
                     accuracy = 0.0
 
                 global_accuracy += accuracy
-            global_accuracy /= 20.0
+            global_accuracy /= 800.0
             print('*'*70)
             print('[%d]\tTest set\tAccuracy:\t%d'%(batch_id, global_accuracy))
             print('*'*70)
