@@ -32,7 +32,6 @@ if __name__ == '__main__':
     gflags.DEFINE_integer("test_every", 100, "test model after each test_every iter.")
     gflags.DEFINE_integer("max_iter", 50000, "number of iterations before stopping")
     gflags.DEFINE_string("model_path", "/home/data/pin/model/siamese", "path to store model")
-    gflags.DEFINE_string("gpu_ids", "0,1,2,3", "gpu ids used to train")
 
     Flags(sys.argv)
 
@@ -49,10 +48,6 @@ if __name__ == '__main__':
 
     loss_fn = torch.nn.BCEWithLogitsLoss(size_average=True)
     net = SiameseNetwork()
-
-    # multi gpu
-    if len(Flags.gpu_ids.split(",")) > 1:
-        net = torch.nn.DataParallel(net)
 
     if torch.cuda.is_available():
         net.cuda()
