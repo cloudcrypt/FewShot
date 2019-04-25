@@ -19,6 +19,14 @@ def to_var(tensor, cuda=True):
     else:
         return Variable(tensor)
 
+def to_cuda(tensor):
+    if torch.cuda.is_available():
+        return tensor.cuda()
+    return tensor
+
+def to_tensor(arr):
+    return torch.from_numpy(arr)
+
 def to_data(x):
     """Converts variable to numpy."""
     if torch.cuda.is_available():

@@ -16,6 +16,7 @@ import sys
 from collections import deque
 import os
 from helpers import *
+from omni_loader import OmniLoader
 
 if __name__ == '__main__':
 
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     gflags.DEFINE_integer("show_every", 10, "show result after each show_every iter.")
     gflags.DEFINE_integer("save_every", 100, "save model after each save_every iter.")
     gflags.DEFINE_integer("test_every", 100, "test model after each test_every iter.")
-    gflags.DEFINE_integer("max_iter", 50000, "number of iterations before stopping")
+    gflags.DEFINE_integer("max_iter", 1000000, "number of iterations before stopping")
     gflags.DEFINE_string("model_path", "model/siamese", "path to store model")
 
     Flags(sys.argv)
@@ -38,16 +39,20 @@ if __name__ == '__main__':
     if not os.path.exists(Flags.model_path):
         os.makedirs(Flags.model_path)
 
-    data_transforms = transforms.Compose([
-        transforms.RandomAffine(15),
-        transforms.ToTensor()
-    ])
+    # data_transforms = transforms.Compose([
+    #     transforms.RandomAffine(15),
+    #     transforms.ToTensor()
+    # ])
 
-    trainSet = OmniglotTrain(Flags.train_path, transform=data_transforms)
-    testSet = OmniglotTest(Flags.test_path, transform=transforms.ToTensor(), times = Flags.times, way = Flags.way)
-    testLoader = DataLoader(testSet, batch_size=Flags.way, shuffle=False, num_workers=Flags.workers)
+    omniglot_loader = OmniLoader(
+        dataset_path="omniglot", use_augmentation=False, batch_size=32)
+    omniglot_loader.split_train_datasets()
 
-    trainLoader = DataLoader(trainSet, batch_size=Flags.batch_size, shuffle=False, num_workers=Flags.workers)
+    # trainSet = OmniglotTrain(Flags.train_path, transform=data_transforms)
+    # testSet = OmniglotTest(Flags.test_path, transform=transforms.ToTensor(), times = Flags.times, way = Flags.way)
+    # testLoader = DataLoader(testSet, batch_size=Flags.way, shuffle=False, num_workers=Flags.workers)
+    #
+    # trainLoader = DataLoader(trainSet, batch_size=Flags.batch_size, shuffle=False, num_workers=Flags.workers)
 
     loss_fn = torch.nn.BCEWithLogitsLoss(size_average=True)
     net = SiameseNetwork()
@@ -64,12 +69,15 @@ if __name__ == '__main__':
     loss_val = 0
     time_start = time.time()
     queue = deque(maxlen=20)
+    support_set_size = 20
 
-    for batch_id, (img1, img2, label) in enumerate(trainLoader, 1):
-        if batch_id > Flags.max_iter:
-            break
+    for iteration in range(Flags.max_iter):
+        images, labels = omniglot_loader.get_train_batch()
+    # for batch_id, (img1, img2, label) in enumerate(trainLoader, 1):
+    #     if batch_id > Flags.max_iter:
+    #         break
 
-        img1, img2, label = to_var(img1), to_var(img2), to_var(label)
+        img1, img2, label = to_var(images[0]), to_var(images[1]), to_var(labels)
 
         optimizer.zero_grad()
         output = net.forward(img1, img2)
@@ -77,26 +85,30 @@ if __name__ == '__main__':
         loss_val += loss.item()
         loss.backward()
         optimizer.step()
-        if batch_id % Flags.show_every == 0 :
-            print('[%d]\tloss:\t%.5f\ttime lapsed:\t%.2f s'%(batch_id, loss_val/Flags.show_every, time.time() - time_start))
+        if iteration % Flags.show_every == 0 :
+            print('[%d]\tloss:\t%.5f\ttime lapsed:\t%.2f s'%(iteration, loss_val/Flags.show_every, time.time() - time_start))
             loss_val = 0
             time_start = time.time()
-        if batch_id % Flags.save_every == 0:
-            torch.save(net.state_dict(), Flags.model_path + '/model-inter-' + str(batch_id+1) + ".pt")
-        if batch_id % Flags.test_every == 0:
+        if iteration % Flags.save_every == 0:
+            torch.save(net.state_dict(), Flags.model_path + '/model-inter-' + str(iteration+1) + ".pt")
+        if iteration % Flags.test_every == 0:
             global_accuracy = 0.0
-            for i in range(0, 800):
-                img1, img2 = testSet.get_one_shot_batch()
-                img1, img2 = to_var(img1), to_var(img2)
-                output = net.forward(img1, img2)
-                
-                if np.asscalar(to_data(torch.argmax(output))) == 0:
-                    global_accuracy += 1.0
+            number_of_runs_per_alphabet = 40
+            validation_accuracy = omniglot_loader.one_shot_test(
+                net, support_set_size, number_of_runs_per_alphabet, is_validation=True)
 
-            global_accuracy /= 800.0
-            print('*'*70)
-            print('[%d]\tTest set\tAccuracy:\t%f'%(batch_id, global_accuracy))
-            print('*'*70)
+            # for i in range(0, 800):
+            #     img1, img2 = testSet.get_one_shot_batch()
+            #     img1, img2 = to_var(img1), to_var(img2)
+            #     output = net.forward(img1, img2)
+            #
+            #     if np.asscalar(to_data(torch.argmax(output))) == 0:
+            #         global_accuracy += 1.0
+            #
+            # global_accuracy /= 800.0
+            # print('*'*70)
+            # print('[%d]\tTest set\tAccuracy:\t%f'%(batch_id, global_accuracy))
+            # print('*'*70)
 
             # right, error = 0, 0
             # for _, (test1, test2) in enumerate(testLoader, 1):
