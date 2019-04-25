@@ -28,9 +28,9 @@ if __name__ == '__main__':
     gflags.DEFINE_integer("workers", 4, "number of dataLoader workers")
     gflags.DEFINE_integer("batch_size", 128, "number of batch size")
     gflags.DEFINE_float("lr", 0.00006, "learning rate")
-    gflags.DEFINE_integer("show_every", 10, "show result after each show_every iter.")
-    gflags.DEFINE_integer("save_every", 100, "save model after each save_every iter.")
-    gflags.DEFINE_integer("test_every", 100, "test model after each test_every iter.")
+    gflags.DEFINE_integer("show_every", 100, "show result after each show_every iter.")
+    gflags.DEFINE_integer("save_every", 1000, "save model after each save_every iter.")
+    gflags.DEFINE_integer("test_every", 1000, "test model after each test_every iter.")
     gflags.DEFINE_integer("max_iter", 1000000, "number of iterations before stopping")
     gflags.DEFINE_string("model_path", "model/siamese", "path to store model")
 
@@ -39,20 +39,9 @@ if __name__ == '__main__':
     if not os.path.exists(Flags.model_path):
         os.makedirs(Flags.model_path)
 
-    # data_transforms = transforms.Compose([
-    #     transforms.RandomAffine(15),
-    #     transforms.ToTensor()
-    # ])
-
     omniglot_loader = OmniLoader(
         dataset_path="omniglot", use_augmentation=False, batch_size=32)
     omniglot_loader.split_train_datasets()
-
-    # trainSet = OmniglotTrain(Flags.train_path, transform=data_transforms)
-    # testSet = OmniglotTest(Flags.test_path, transform=transforms.ToTensor(), times = Flags.times, way = Flags.way)
-    # testLoader = DataLoader(testSet, batch_size=Flags.way, shuffle=False, num_workers=Flags.workers)
-    #
-    # trainLoader = DataLoader(trainSet, batch_size=Flags.batch_size, shuffle=False, num_workers=Flags.workers)
 
     loss_fn = torch.nn.BCEWithLogitsLoss(size_average=True)
     net = SiameseNetwork()
@@ -70,13 +59,11 @@ if __name__ == '__main__':
     time_start = time.time()
     queue = deque(maxlen=20)
     support_set_size = 20
+    
+    best_accuracy = 0.0
 
     for iteration in range(Flags.max_iter):
         images, labels = omniglot_loader.get_train_batch()
-    # for batch_id, (img1, img2, label) in enumerate(trainLoader, 1):
-    #     if batch_id > Flags.max_iter:
-    #         break
-
         img1, img2, label = to_var(images[0]), to_var(images[1]), to_var(labels)
 
         optimizer.zero_grad()
@@ -96,38 +83,20 @@ if __name__ == '__main__':
             number_of_runs_per_alphabet = 40
             validation_accuracy = omniglot_loader.one_shot_test(
                 net, support_set_size, number_of_runs_per_alphabet, is_validation=True)
-
-            # for i in range(0, 800):
-            #     img1, img2 = testSet.get_one_shot_batch()
-            #     img1, img2 = to_var(img1), to_var(img2)
-            #     output = net.forward(img1, img2)
-            #
-            #     if np.asscalar(to_data(torch.argmax(output))) == 0:
-            #         global_accuracy += 1.0
-            #
-            # global_accuracy /= 800.0
-            # print('*'*70)
-            # print('[%d]\tTest set\tAccuracy:\t%f'%(batch_id, global_accuracy))
-            # print('*'*70)
-
-            # right, error = 0, 0
-            # for _, (test1, test2) in enumerate(testLoader, 1):
-            #     test1, test2 = to_var(test1), to_var(test2)
-            #     output = net.forward(test1, test2).data.cpu().numpy()
-            #     pred = np.argmax(output)
-            #     if pred == 0:
-            #         right += 1
-            #     else: error += 1
-            # print('*'*70)
-            # print('[%d]\tTest set\tcorrect:\t%d\terror:\t%d\tprecision:\t%f'%(batch_id, right, error, right*1.0/(right+error)))
-            # print('*'*70)
-            # queue.append(right*1.0/(right+error))
+            
+            if validation_accuracy > best_accuracy:
+                if not os.path.exists(Flags.model_path):
+                    os.makedirs(Flags.model_path)
+                torch.save(net.state_dict(), Flags.model_path + "/best_siamese_model.pt")
+                
+                best_accuracy = validation_accuracy
             queue.append(global_accuracy)
         train_loss.append(loss_val)
-    #  learning_rate = learning_rate * 0.95
 
     with open('train_loss', 'wb') as f:
         pickle.dump(train_loss, f)
+
+    print("Best validation accuracy:"+ str(best_accuracy))
 
     acc = 0.0
     for d in queue:

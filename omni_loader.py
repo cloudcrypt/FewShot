@@ -206,11 +206,11 @@ class OmniLoader:
             image = to_cuda(transf(Image.open(path_list[pair * 2]).convert('L')))
             image = image / image.std() - image.mean()
 
-            pairs_of_images[0][pair, 0, :, :] = image
+            pairs_of_images[0][pair] = image
             image = to_cuda(transf(Image.open(path_list[pair * 2 + 1]).convert('L')))
             image = image / image.std() - image.mean()
 
-            pairs_of_images[1][pair, 0, :, :] = image
+            pairs_of_images[1][pair] = image
             if not is_one_shot_task:
                 if (pair + 1) % 2 == 0:
                     labels[pair] = 0
@@ -419,20 +419,17 @@ class OmniLoader:
                     support_set_size, is_validation=is_validation)
                 to_var(images[0]), to_var(images[1])
                 probabilities = model(to_var(images[0]), to_var(images[1]))
-
+                
                 # Added this condition because noticed that sometimes the outputs
                 # of the classifier was almost the same in all images, meaning that
                 # the argmax would be always by defenition 0.
-                if np.asscalar(to_data(torch.argmax(probabilities))) == 0 and np.asscalar(to_data(torch.argmax(probabilities.std()))) > 0.01:
-                    accuracy = 1.0
-                else:
-                    accuracy = 0.0
+                if np.asscalar(to_data(torch.argmax(probabilities))) == 0: 
+                    mean_alphabet_accuracy += 1.0
+                    mean_global_accuracy += 1.0
 
-                mean_alphabet_accuracy += accuracy
-                mean_global_accuracy += accuracy
 
             mean_alphabet_accuracy /= number_of_tasks_per_alphabet
-
+            
             print(alphabet + ' alphabet' + ', accuracy: ' +
                   str(mean_alphabet_accuracy))
             if is_validation:
