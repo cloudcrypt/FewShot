@@ -89,15 +89,13 @@ if __name__ == '__main__':
                 img1, img2 = testSet.get_one_shot_batch()
                 img1, img2 = to_var(img1), to_var(img2)
                 output = net.forward(img1, img2)
-                if torch.argmax(output) == 0:
-                    accuracy = 1.0
-                else:
-                    accuracy = 0.0
+                
+                if np.asscalar(to_data(torch.argmax(output))) == 0:
+                    global_accuracy += 1.0
 
-                global_accuracy += accuracy
             global_accuracy /= 800.0
             print('*'*70)
-            print('[%d]\tTest set\tAccuracy:\t%d'%(batch_id, global_accuracy))
+            print('[%d]\tTest set\tAccuracy:\t%f'%(batch_id, global_accuracy))
             print('*'*70)
 
             # right, error = 0, 0
