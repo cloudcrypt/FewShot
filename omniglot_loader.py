@@ -173,7 +173,7 @@ class OmniglotTest(Dataset):
         different_classes = random.sample(range(0, len(available_classes)), self.way)
 
         for img_idx, idx in zip(different_classes, range(1, self.way+1)):
-            images1[img_idx] = transf(self.datas[idx])
+            images1[img_idx] = transf(random.choice(self.datas[idx]))
 
         images2 = torch.zeros(1, 1, self.image_width, self.image_height)
         images2[0] = test_image
