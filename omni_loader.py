@@ -224,7 +224,7 @@ class OmniLoader:
                     labels[pair] = 0
 
         if not is_one_shot_task:
-            random_permutation = to_cuda(torch.random.permutation(number_of_pairs))
+            random_permutation = to_cuda(to_tensor(np.random.permutation(number_of_pairs)))
             labels = labels[random_permutation]
             pairs_of_images[0][:, :, :,
             :] = pairs_of_images[0][random_permutation, :, :, :]
