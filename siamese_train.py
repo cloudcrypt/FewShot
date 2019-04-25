@@ -29,7 +29,7 @@ if __name__ == '__main__':
     gflags.DEFINE_float("lr", 0.00006, "learning rate")
     gflags.DEFINE_integer("show_every", 10, "show result after each show_every iter.")
     gflags.DEFINE_integer("save_every", 100, "save model after each save_every iter.")
-    gflags.DEFINE_integer("test_every", 100, "test model after each test_every iter.")
+    gflags.DEFINE_integer("test_every", 5, "test model after each test_every iter.")
     gflags.DEFINE_integer("max_iter", 50000, "number of iterations before stopping")
     gflags.DEFINE_string("model_path", "/home/data/pin/model/siamese", "path to store model")
 
@@ -81,18 +81,35 @@ if __name__ == '__main__':
         if batch_id % Flags.save_every == 0:
             torch.save(net.state_dict(), Flags.model_path + '/model-inter-' + str(batch_id+1) + ".pt")
         if batch_id % Flags.test_every == 0:
-            right, error = 0, 0
-            for _, (test1, test2) in enumerate(testLoader, 1):
-                test1, test2 = to_var(test1), to_var(test2)
-                output = net.forward(test1, test2).data.cpu().numpy()
-                pred = np.argmax(output)
-                if pred == 0:
-                    right += 1
-                else: error += 1
+            global_accuracy = 0.0
+            for i in range(0, 20):
+                img1, img2 = testSet.get_one_shot_batch()
+                img1, img2 = to_var(img1), to_var(img2)
+                output = net.forward(img1, img2)
+                if torch.argmax(output) == 0:
+                    accuracy = 1.0
+                else:
+                    accuracy = 0.0
+
+                global_accuracy += accuracy
+            global_accuracy /= 20.0
             print('*'*70)
-            print('[%d]\tTest set\tcorrect:\t%d\terror:\t%d\tprecision:\t%f'%(batch_id, right, error, right*1.0/(right+error)))
+            print('[%d]\tTest set\tAccuracy:\t%d'%(batch_id, global_accuracy))
             print('*'*70)
-            queue.append(right*1.0/(right+error))
+
+            # right, error = 0, 0
+            # for _, (test1, test2) in enumerate(testLoader, 1):
+            #     test1, test2 = to_var(test1), to_var(test2)
+            #     output = net.forward(test1, test2).data.cpu().numpy()
+            #     pred = np.argmax(output)
+            #     if pred == 0:
+            #         right += 1
+            #     else: error += 1
+            # print('*'*70)
+            # print('[%d]\tTest set\tcorrect:\t%d\terror:\t%d\tprecision:\t%f'%(batch_id, right, error, right*1.0/(right+error)))
+            # print('*'*70)
+            # queue.append(right*1.0/(right+error))
+            queue.append(global_accuracy)
         train_loss.append(loss_val)
     #  learning_rate = learning_rate * 0.95
 

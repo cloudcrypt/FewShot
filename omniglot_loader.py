@@ -116,6 +116,7 @@ class OmniglotTrain(Dataset):
         if self.transform:
             image1 = self.transform(image1)
             image2 = self.transform(image2)
+
         return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
 
 
@@ -126,6 +127,9 @@ class OmniglotTest(Dataset):
         super(OmniglotTest, self).__init__()
         loader = OmniglotLoader(dataPath)
         loader.download_if_necessary()
+
+        self.image_width = 105
+        self.image_height = 105
 
         self.transform = transform
         self.times = times
@@ -147,6 +151,27 @@ class OmniglotTest(Dataset):
                 idx += 1
         print("finish loading test dataset to memory")
         return datas, idx
+
+    def get_one_shot_batch(self):
+        images1 = torch.zeros(self.way+1, 1, self.image_width, self.image_height)
+
+        test_class = random.randint(0, self.num_classes - 1)
+        test_image = random.choice(self.datas[test_class])
+
+        images1[0] = test_image
+
+        available_classes = list(range(0, self.num_classes))
+        available_classes.remove(test_class)
+
+        different_classes = random.sample(range(0, len(available_classes)), self.way)
+
+        for img_idx, idx in zip(different_classes, range(1, self.way+1)):
+            images1[img_idx] = self.datas[idx]
+
+        images2 = torch.zeros(1, 1, self.image_width, self.image_height)
+        images2[0] = test_image
+        images2 = images2.expand(self.way+1, 1, self.image_width, self.image_height)
+        return images1, images2
 
     def __len__(self):
         return self.times * self.way
