@@ -206,11 +206,11 @@ class OmniLoader:
             image = to_cuda(transf(Image.open(path_list[pair * 2]).convert('L')))
             image = image / image.std() - image.mean()
 
-            pairs_of_images[0][pair, :, :, 0] = image
+            pairs_of_images[0][pair, 0, :, :] = image
             image = to_cuda(transf(Image.open(path_list[pair * 2 + 1]).convert('L')))
             image = image / image.std() - image.mean()
 
-            pairs_of_images[1][pair, :, :, 0] = image
+            pairs_of_images[1][pair, 0, :, :] = image
             if not is_one_shot_task:
                 if (pair + 1) % 2 == 0:
                     labels[pair] = 0
