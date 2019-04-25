@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 import os
-from glob import glob
+import glob as glob
 from numpy.random import choice as npc
 import numpy as np
 import time
@@ -10,10 +10,11 @@ import torchvision.datasets as dset
 from PIL import Image
 import errno
 
-class OmniglotLoader:
+class PoseDatasetLoader:
     urls = [
         'https://drive.google.com/a/robotics.utias.utoronto.ca/uc?export=download&confirm=XaSO&id=1_21pFglIueUE0f13AtHFSdyxugEo9K_f'
     ]
+    raw_folder = 'raw'
     processed_folder = 'processed'
 
     def __init__(self, path):
@@ -64,20 +65,20 @@ class PoseDatasetTrain(Dataset):
     def __init__(self, dataPath, transform=None):
         super(PoseDatasetTrain, self).__init__()
 
-        loader = OmniglotLoader(dataPath)
-        loader.download_if_necessary()
+        #loader = PoseDatasetLoader(dataPath)
+        #loader.download_if_necessary()
 
         np.random.seed(0)
         # self.dataset = dataset
         self.transform = transform
-        self.datas, self.num_classes = self.loadToMem(os.path.join(loader.dataset_path, loader.processed_folder, 'images_background'))
+        self.datas, self.num_classes = self.loadToMem(dataPath)
 
     def loadToMem(self, dataPath):
         print("begin loading training dataset to memory")
         datas = {}
         agrees = [0, 90, 180, 270]
         idx = 0
-        imgNames = glob.glob(dataPath + "\\good\\gen\\" + "*.png", recursive=True)
+        imgNames = glob.glob(dataPath + "\\train\\gen\\" + "*.png", recursive=True)
         for imgName in imgNames:
             datas[idx]=[]
             datas[idx].append(Image.open(imgName).convert('L'))
@@ -129,13 +130,13 @@ class PoseDatasetTest(Dataset):
         self.way = way
         self.img1 = None
         self.c1 = None
-        self.datas, self.num_classes = self.loadToMem(os.path.join(loader.dataset_path, loader.processed_folder, 'images_evaluation'))
+        self.datas, self.num_classes = self.loadToMem(dataPath)
 
     def loadToMem(self, dataPath):
         print("begin loading test dataset to memory")
         datas = {}
         idx = 0
-        imgNames = glob.glob(dataPath + "\\good\\gen\\" + "*.png", recursive=True)
+        imgNames = glob.glob(dataPath + "\\test\\gen\\" + "*.png", recursive=True)
         for imgName in imgNames:
             datas[idx] = []
             datas[idx].append(Image.open(imgName).convert('L'))
@@ -170,5 +171,5 @@ class PoseDatasetTest(Dataset):
 
 # test
 if __name__=='__main__':
-    omniglotTrain = OmniglotTrain('./images_background', 30000*8)
-    print(omniglotTrain)
+    omniglotTrain = PoseDatasetTrain('D:/Downloads/bpM6x25_C/bpM6x25_C', 30000*8)
+    print(omniglotTrain.num_classes)
