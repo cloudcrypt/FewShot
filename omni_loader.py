@@ -8,8 +8,6 @@ import torch
 from torchvision import transforms
 from helpers import *
 
-from image_augmentor import ImageAugmentor
-
 
 class OmniLoader:
     """Class that loads and prepares the Omniglot dataset
@@ -26,8 +24,6 @@ class OmniLoader:
         batch_size: size of the batch to be used in training
         use_augmentation: boolean that allows us to select if data augmentation is
             used or not
-        image_augmentor: instance of class ImageAugmentor that augments the images
-            with the affine transformations referred in the paper
     """
 
     urls = [
@@ -63,11 +59,6 @@ class OmniLoader:
         self._current_evaluation_alphabet_index = 0
 
         self.load_dataset()
-
-        if (self.use_augmentation):
-            self.image_augmentor = self.createAugmentor()
-        else:
-            self.use_augmentation = []
 
     def _check_exists(self):
         return os.path.exists(os.path.join(self.dataset_path, self.processed_folder, "images_evaluation")) and \
@@ -141,22 +132,6 @@ class OmniLoader:
 
             self.evaluation_dictionary[alphabet] = current_alphabet_dictionary
 
-    def createAugmentor(self):
-        """ Creates ImageAugmentor object with the parameters for image augmentation
-        Rotation range was set in -15 to 15 degrees
-        Shear Range was set in between -0.3 and 0.3 radians
-        Zoom range between 0.8 and 2
-        Shift range was set in +/- 5 pixels
-        Returns:
-            ImageAugmentor object
-        """
-        rotation_range = [-15, 15]
-        shear_range = [-0.3 * 180 / math.pi, 0.3 * 180 / math.pi]
-        zoom_range = [0.8, 2]
-        shift_range = [5, 5]
-
-        return ImageAugmentor(0.5, shear_range, rotation_range, shift_range, zoom_range)
-
     def split_train_datasets(self):
         """ Splits the train set in train and validation
         Divide the 30 train alphabets in train and validation with
@@ -181,7 +156,33 @@ class OmniLoader:
         self._validation_alphabets = available_alphabets
         self._evaluation_alphabets = list(self.evaluation_dictionary.keys())
 
-    def _convert_path_list_to_images_and_labels(self, path_list, is_one_shot_task):
+    def get_transforms(self, use_augmentation=False):
+        transfs1 = []
+        transfs2 = []
+
+        probs = torch.rand(2, 4)
+
+        if use_augmentation:
+            for transf, prob in zip([transfs1, transfs2], probs):
+                assert prob.shape == (4, )
+
+                if prob[0] > 0.5:
+                    transf.append(transforms.RandomRotation(15))
+                if prob[1] > 0.5:
+                    transf.append(transforms.RandomAffine(0, shear=0.3 * 180 / math.pi))
+                if prob[2] > 0.5:
+                    transf.append(transforms.RandomAffine(0, translate=(5.0/self.image_width, 5.0/self.image_height)))
+                if prob[3] > 0.5:
+                    zx, zy = np.random.uniform(0.8, 2, 2)
+                    transf.append(transforms.Resize((int(self.image_height*zy), int(self.image_width*zx))))
+                    transf.append(transforms.CenterCrop((self.image_height, self.image_width)))
+
+        transfs1.append(transforms.ToTensor())
+        transfs2.append(transforms.ToTensor())
+
+        return transforms.Compose(transfs1), transforms.Compose(transfs2)
+
+    def _convert_path_list_to_images_and_labels(self, path_list, is_one_shot_task, use_augmentation=False):
         """ Loads the images and its correspondent labels from the path
         Take the list with the path from the current batch, read the images and
         return the pairs of images and the labels
@@ -200,14 +201,14 @@ class OmniLoader:
             (number_of_pairs, 1, self.image_height, self.image_height))) for i in range(2)]
         labels = to_cuda(torch.zeros((number_of_pairs, 1)))
 
-        transf = transforms.ToTensor()
-
         for pair in range(number_of_pairs):
-            image = to_cuda(transf(Image.open(path_list[pair * 2]).convert('L')))
+            transf1, transf2 = self.get_transforms(use_augmentation)
+
+            image = to_cuda(transf1(Image.open(path_list[pair * 2]).convert('L')))
             image = image / image.std() - image.mean()
 
             pairs_of_images[0][pair] = image
-            image = to_cuda(transf(Image.open(path_list[pair * 2 + 1]).convert('L')))
+            image = to_cuda(transf2(Image.open(path_list[pair * 2 + 1]).convert('L')))
             image = image / image.std() - image.mean()
 
             pairs_of_images[1][pair] = image
@@ -302,11 +303,7 @@ class OmniLoader:
             self._current_train_alphabet_index = 0
 
         images, labels = self._convert_path_list_to_images_and_labels(
-            bacth_images_path, is_one_shot_task=False)
-
-        # Get random transforms if augmentation is on
-        if self.use_augmentation:
-            images = self.image_augmentor.get_random_transform(images)
+            bacth_images_path, is_one_shot_task=False, use_augmentation=self.use_augmentation)
 
         return images, labels
 
