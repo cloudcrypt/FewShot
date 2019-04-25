@@ -163,9 +163,11 @@ class OmniglotTest(Dataset):
         images1 = torch.zeros(self.way+1, 1, self.image_width, self.image_height)
 
         test_class = random.randint(0, self.num_classes - 1)
-        test_image = transf(random.choice(self.datas[test_class]))
+        image_indices = random.sample(range(0, len(self.datas[test_class])), 2)
 
-        images1[0] = test_image
+        test_image = transf(self.datas[test_class][image_indices[0]])
+
+        images1[0] = transf(self.datas[test_class][image_indices[1]])
 
         available_classes = list(range(0, self.num_classes))
         available_classes.remove(test_class)
