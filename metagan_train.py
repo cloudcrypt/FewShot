@@ -167,9 +167,9 @@ if __name__ == '__main__':
 
     trainSet = OmniglotTrain(Flags.train_path, transform=data_transforms)
     testSet = OmniglotTest(Flags.test_path, transform=transforms.ToTensor(), times=Flags.times, way=Flags.way)
-    testLoader = DataLoader(testSet, batch_size=Flags.way, shuffle=False, num_workers=Flags.workers)
+    testLoader = DataLoader(testSet, batch_size=Flags.way, shuffle=False)
 
-    trainLoader = DataLoader(trainSet, batch_size=Flags.batch_size, shuffle=False, num_workers=Flags.workers)
+    trainLoader = DataLoader(trainSet, batch_size=Flags.batch_size, shuffle=False)
 
     acc = train_metagan(trainLoader, testLoader, Flags)
     print("Best validation accuracy:" + str(acc))
