@@ -417,6 +417,8 @@ class OmniLoader:
                 to_var(images[0]), to_var(images[1])
                 probabilities = model(to_var(images[0]), to_var(images[1]))
                 
+                if len(probabilities.shape) == 2 and probabilities.shape[1] == 2:
+                    probabilities = probabilities[:, 0].view(-1, 1)
                 # Added this condition because noticed that sometimes the outputs
                 # of the classifier was almost the same in all images, meaning that
                 # the argmax would be always by defenition 0.

@@ -8,19 +8,27 @@ from collections import deque
 import os
 from helpers import *
 from omni_loader import OmniLoader
+from Generator import Generator
 
+def sample_noise(batch_size):
+    return to_var(torch.rand(batch_size, 256))
 
 def train_metagan(omniglot_loader, Flags):
 
-    loss_fn = torch.nn.BCEWithLogitsLoss(size_average=True)
+    loss_fn = torch.nn.BCELoss()
+
     net = SiameseNetwork(num_outputs=2)
+    generator = Generator(image_size=Flags.image_size)
 
     if torch.cuda.is_available():
         print("Using CUDA")
         net.cuda()
 
-    optimizer = torch.optim.Adam(net.parameters(), lr=Flags.lr)
-    optimizer.zero_grad()
+    D_optimizer = torch.optim.Adam(net.parameters(), lr=Flags.lr, betas=[Flags.beta1, Flags.beta2])
+    G_optimizer = torch.optim.Adam(generator.parameters(), lr=Flags.lr, betas=[Flags.beta1, Flags.beta2])
+    
+    D_optimizer.zero_grad()
+    G_optimizer.zero_grad()
 
     loss_val = 0
     time_start = time.time()
@@ -32,16 +40,50 @@ def train_metagan(omniglot_loader, Flags):
 
     for iteration in range(Flags.max_iter):
         net.train()
+        generator.train()
 
         images, labels = omniglot_loader.get_train_batch()
         img1, img2, label = to_var(images[0]), to_var(images[1]), to_var(labels)
 
-        optimizer.zero_grad()
+        D_optimizer.zero_grad()
+
         output = net.forward(img1, img2)
-        loss = loss_fn(output, label)
-        loss_val += loss.item()
-        loss.backward()
-        optimizer.step()
+
+        D_real_pair_loss = loss_fn(output[:, 0].view(-1, 1), label)
+        D_real_disrcim_loss = loss_fn(output[:, 1].view(-1, 1), torch.ones((len(labels), 1)))
+
+        noise = sample_noise(len(labels))
+        img1_fake = generator.forward(img1, noise)
+        img2_fake = generator.forward(img2, noise)
+        fake_output = net.forward(img1_fake, img2_fake)
+
+        D_fake_discrim_loss = loss_fn(fake_output[:, 1].view(-1, 1), torch.zeros((len(labels), 1)))
+
+        D_total_loss = D_real_pair_loss + D_real_disrcim_loss + D_fake_discrim_loss
+        loss_val += D_total_loss
+        D_total_loss.backward()
+        D_optimizer.step()
+
+        G_optimizer.zero_grad()
+
+        noise = sample_noise(len(labels))
+        img1_fake = generator.forward(img1, noise)
+        img2_fake = generator.forward(img2, noise)
+        fake_output = net.forward(img1_fake, img2_fake)
+
+        G_loss = loss_fn(fake_output[:, 1].view(-1, 1), torch.ones((len(labels), 1)))
+        G_loss.backward()
+        G_optimizer.step()
+
+        noise = sample_noise(len(labels))
+        img1_fake = generator.forward(img1, noise)
+        img2_fake = generator.forward(img2, noise)
+        fake_output = net.forward(img1_fake, img2_fake)
+
+        D_fake_pair_loss = loss_fn(fake_output[:, 0].view(-1, 1), label)
+        D_fake_pair_loss.backward()
+        D_optimizer.step()
+
         if iteration % Flags.show_every == 0:
             print('[%d]\tloss:\t%.5f\ttime lapsed:\t%.2f s' % (
             iteration, loss_val / Flags.show_every, time.time() - time_start))
@@ -80,6 +122,7 @@ if __name__ == '__main__':
     Flags = gflags.FLAGS
     gflags.DEFINE_string("train_path", "omniglot/", "training folder")
     gflags.DEFINE_string("test_path", "omniglot/", 'path of testing folder')
+    gflags.DEFINE_integer("image_size", 105, "image size (width)")
     gflags.DEFINE_integer("way", 20, "how much way one-shot learning")
     gflags.DEFINE_string("times", 400, "number of samples to test accuracy")
     gflags.DEFINE_integer("workers", 4, "number of dataLoader workers")
