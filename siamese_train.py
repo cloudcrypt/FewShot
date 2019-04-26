@@ -40,7 +40,7 @@ if __name__ == '__main__':
         os.makedirs(Flags.model_path)
 
     omniglot_loader = OmniLoader(
-        dataset_path="omniglot", use_augmentation=True, batch_size=32)
+        dataset_path="omniglot", use_augmentation=False, batch_size=32)
     omniglot_loader.split_train_datasets()
 
     loss_fn = torch.nn.BCEWithLogitsLoss(size_average=True)
