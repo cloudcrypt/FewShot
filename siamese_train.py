@@ -1,13 +1,4 @@
 import torch
-import pickle
-import torchvision
-from torchvision import transforms
-import torchvision.datasets as dset
-from torchvision import transforms
-from omniglot_loader import OmniglotTrain, OmniglotTest
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
-import matplotlib.pyplot as plt
 from siamese_model import *
 import time
 import numpy as np
@@ -54,13 +45,13 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(net.parameters(),lr = Flags.lr )
     optimizer.zero_grad()
 
-    train_loss = []
     loss_val = 0
     time_start = time.time()
     queue = deque(maxlen=20)
     support_set_size = 20
     
-    best_accuracy = 0.0
+    best_validation_accuracy = 0.0
+    best_accuracy_iteration = 0
 
     for iteration in range(Flags.max_iter):
         images, labels = omniglot_loader.get_train_batch()
@@ -84,22 +75,24 @@ if __name__ == '__main__':
             validation_accuracy = omniglot_loader.one_shot_test(
                 net, support_set_size, number_of_runs_per_alphabet, is_validation=True)
             
-            if validation_accuracy > best_accuracy:
+            if validation_accuracy > best_validation_accuracy:
                 if not os.path.exists(Flags.model_path):
                     os.makedirs(Flags.model_path)
                 torch.save(net.state_dict(), Flags.model_path + "/best_siamese_model.pt")
                 
-                best_accuracy = validation_accuracy
+                best_validation_accuracy = validation_accuracy
+                best_accuracy_iteration = iteration
             queue.append(global_accuracy)
-        train_loss.append(loss_val)
 
-    with open('train_loss', 'wb') as f:
-        pickle.dump(train_loss, f)
+        # If accuracy does not improve for 10000 batches stop the training
+        if iteration - best_accuracy_iteration > 10000:
+            print(
+                'Early Stopping: validation accuracy did not increase for 10000 iterations')
+            print('Best Validation Accuracy = ' +
+                  str(best_validation_accuracy))
+            print('Validation Accuracy = ' + str(best_validation_accuracy))
+            break
 
-    print("Best validation accuracy:"+ str(best_accuracy))
+    print("Best validation accuracy:" + str(best_validation_accuracy))
 
-    acc = 0.0
-    for d in queue:
-        acc += d
-    print("#"*70)
-    print("final accuracy: ", acc/20)
+    evaluation_accuracy = omniglot_loader.one_shot_test(net, 20, 40, False)
