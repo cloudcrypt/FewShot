@@ -7,13 +7,17 @@ import sys
 from collections import deque
 import os
 from helpers import *
-from omni_loader import OmniLoader
+from torchvision import transforms
+from omniglot_loader import OmniglotTrain, OmniglotTest
 from Generator import Generator
+from torch.utils.data import DataLoader
+
 
 def sample_noise(batch_size):
     return to_var(torch.rand(batch_size, 256))
 
-def train_metagan(omniglot_loader, Flags):
+
+def train_metagan(trainLoader, testLoader, Flags):
 
     loss_fn = torch.nn.BCELoss()
 
@@ -33,18 +37,22 @@ def train_metagan(omniglot_loader, Flags):
 
     loss_val = 0
     time_start = time.time()
-    queue = deque(maxlen=20)
     support_set_size = 20
 
     best_validation_accuracy = 0.0
     best_accuracy_iteration = 0
 
-    for iteration in range(Flags.max_iter):
+    for iteration, (img1, img2, label) in enumerate(trainLoader, 1):
+        if iteration > Flags.max_iter:
+            break
+
+        img1, img2, labels = to_var(img1), to_var(img2), to_var(label)
+
         net.train()
         generator.train()
 
-        images, labels = omniglot_loader.get_train_batch()
-        img1, img2, label = to_var(images[0]), to_var(images[1]), to_var(labels)
+        # images, labels = omniglot_loader.get_train_batch()
+        # img1, img2, label = to_var(images[0]), to_var(images[1]), to_var(labels)
 
         D_optimizer.zero_grad()
 
@@ -98,21 +106,27 @@ def train_metagan(omniglot_loader, Flags):
             loss_val = 0
             time_start = time.time()
         if iteration % Flags.test_every == 0:
-            net.eval()
+            validation_accuracy = 0.0
+            for i in range(0, 800):
+                img1, img2 = testSet.get_one_shot_batch()
+                img1, img2 = to_var(img1), to_var(img2)
+                output = net.forward(img1, img2)
 
-            global_accuracy = 0.0
-            number_of_runs_per_alphabet = 40
-            validation_accuracy = omniglot_loader.one_shot_test(
-                net, support_set_size, number_of_runs_per_alphabet, is_validation=True)
+                if np.asscalar(to_data(torch.argmax(output))) == 0:
+                    validation_accuracy += 1.0
 
+            validation_accuracy /= 800.0
             if validation_accuracy > best_validation_accuracy:
                 if not os.path.exists(Flags.model_path):
                     os.makedirs(Flags.model_path)
-                torch.save(net, Flags.model_path + "/best_metagan_model.pt")
+                torch.save(net, Flags.model_path + "/best_metagan_old_model.pt")
 
                 best_validation_accuracy = validation_accuracy
                 best_accuracy_iteration = iteration
-            queue.append(global_accuracy)
+
+            print('*' * 70)
+            print('[%d]\tTest set\tAccuracy:\t%f' % (iteration, validation_accuracy))
+            print('*' * 70)
 
         # If accuracy does not improve for 10000 batches stop the training
         if iteration - best_accuracy_iteration > 10000:
@@ -146,15 +160,16 @@ if __name__ == '__main__':
 
     Flags(sys.argv)
 
-    omniglot_loader = OmniLoader(
-        dataset_path="omniglot", use_augmentation=False, batch_size=32)
-    omniglot_loader.split_train_datasets()
+    data_transforms = transforms.Compose([
+        transforms.RandomAffine(15),
+        transforms.ToTensor()
+    ])
 
-    acc = train_metagan(omniglot_loader, Flags)
+    trainSet = OmniglotTrain(Flags.train_path, batch_size=8, transform=data_transforms)
+    testSet = OmniglotTest(Flags.test_path, transform=transforms.ToTensor(), times=Flags.times, way=Flags.way)
+    testLoader = DataLoader(testSet, batch_size=Flags.way, shuffle=False, num_workers=Flags.workers)
+
+    trainLoader = DataLoader(trainSet, batch_size=Flags.batch_size, shuffle=False, num_workers=Flags.workers)
+
+    acc = train_metagan(trainLoader, testLoader, Flags)
     print("Best validation accuracy:" + str(acc))
-
-    model = torch.load(Flags.model_path + "/best_metagan_model.pt")
-    model.eval()
-    evaluation_accuracy = omniglot_loader.one_shot_test(model, 20, 40, False)
-
-    print('Final Evaluation Accuracy = ' + str(evaluation_accuracy))
