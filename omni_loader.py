@@ -104,6 +104,8 @@ class OmniLoader:
         train_path = os.path.join(self.dataset_path, self.processed_folder, 'images_background')
         validation_path = os.path.join(self.dataset_path, self.processed_folder, 'images_evaluation')
 
+        self.download()
+
         # First let's take care of the train alphabets
         for alphabet in os.listdir(train_path):
             alphabet_path = os.path.join(train_path, alphabet)
@@ -225,7 +227,7 @@ class OmniLoader:
                     labels[pair] = 0
 
         if not is_one_shot_task:
-            random_permutation = to_cuda(to_tensor(np.random.permutation(number_of_pairs)))
+            random_permutation = to_cuda(to_tensor(np.random.permutation(number_of_pairs)).long())
             labels = labels[random_permutation]
             pairs_of_images[0][:, :, :,
             :] = pairs_of_images[0][random_permutation, :, :, :]
