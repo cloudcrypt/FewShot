@@ -10,12 +10,13 @@ from helpers import *
 from omni_loader import OmniLoader
 
 
-def train_siamese(omniglot_loader, Flags):
+def train_metagan(omniglot_loader, Flags):
 
     loss_fn = torch.nn.BCEWithLogitsLoss(size_average=True)
-    net = SiameseNetwork()
+    net = SiameseNetwork(num_outputs=2)
 
     if torch.cuda.is_available():
+        print("Using CUDA")
         net.cuda()
 
     optimizer = torch.optim.Adam(net.parameters(), lr=Flags.lr)
@@ -57,7 +58,7 @@ def train_siamese(omniglot_loader, Flags):
             if validation_accuracy > best_validation_accuracy:
                 if not os.path.exists(Flags.model_path):
                     os.makedirs(Flags.model_path)
-                torch.save(net, Flags.model_path + "/best_siamese_model.pt")
+                torch.save(net, Flags.model_path + "/best_metagan_model.pt")
 
                 best_validation_accuracy = validation_accuracy
                 best_accuracy_iteration = iteration
@@ -83,12 +84,14 @@ if __name__ == '__main__':
     gflags.DEFINE_string("times", 400, "number of samples to test accuracy")
     gflags.DEFINE_integer("workers", 4, "number of dataLoader workers")
     gflags.DEFINE_integer("batch_size", 128, "number of batch size")
-    gflags.DEFINE_float("lr", 0.00006, "learning rate")
+    gflags.DEFINE_float("lr", 0.001, "learning rate")
+    gflags.DEFINE_float("beta1", 0.5, "beta 1")
+    gflags.DEFINE_float("beta2", 0.9, "beta 2")
     gflags.DEFINE_integer("show_every", 100, "show result after each show_every iter.")
     gflags.DEFINE_integer("save_every", 1000, "save model after each save_every iter.")
     gflags.DEFINE_integer("test_every", 1000, "test model after each test_every iter.")
     gflags.DEFINE_integer("max_iter", 1000000, "number of iterations before stopping")
-    gflags.DEFINE_string("model_path", "model/siamese", "path to store model")
+    gflags.DEFINE_string("model_path", "model/metagan", "path to store model")
 
     Flags(sys.argv)
 
@@ -96,10 +99,10 @@ if __name__ == '__main__':
         dataset_path="omniglot", use_augmentation=False, batch_size=32)
     omniglot_loader.split_train_datasets()
 
-    acc = train_siamese(omniglot_loader, Flags)
+    acc = train_metagan(omniglot_loader, Flags)
     print("Best validation accuracy:" + str(acc))
 
-    model = torch.load(Flags.model_path + "/best_siamese_model.pt")
+    model = torch.load(Flags.model_path + "/best_metagan_model.pt")
     model.eval()
     evaluation_accuracy = omniglot_loader.one_shot_test(model, 20, 40, False)
 

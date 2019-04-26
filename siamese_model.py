@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class SiameseNetwork(nn.Module) :
-    def __init__(self):
+    def __init__(self, num_outputs=1):
         super(SiameseNetwork,self).__init__()
 
         self.conv = nn.Sequential(
@@ -19,7 +19,7 @@ class SiameseNetwork(nn.Module) :
             nn.ReLU(),   # 256@6*6
         )
         self.features = nn.Sequential(nn.Linear(9216, 4096), nn.Sigmoid())
-        self.out = nn.Sequential(nn.Linear(4096, 1), nn.Sigmoid())
+        self.out = nn.Sequential(nn.Linear(4096, num_outputs), nn.Sigmoid())
         
     def forward_one(self, x):
         x = self.conv(x)
