@@ -167,7 +167,7 @@ class OmniglotTest(Dataset):
 
         test_image = transf(self.datas[test_class][image_indices[0]])
 
-        images1[0] = transf(self.datas[test_class][image_indeices[1]])
+        images1[0] = transf(self.datas[test_class][image_indices[1]])
 
         available_classes = list(range(0, self.num_classes))
         available_classes.remove(test_class)
