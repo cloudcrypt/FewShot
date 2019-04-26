@@ -58,7 +58,7 @@ def train_metagan(trainLoader, testLoader, Flags):
 
         output = net.forward(img1, img2)
 
-        D_real_pair_loss = loss_fn(output[:, 0].view(-1, 1), label)
+        D_real_pair_loss = loss_fn(output[:, 0].view(-1, 1), labels)
         D_real_disrcim_loss = loss_fn(output[:, 1].view(-1, 1), to_var(torch.ones((len(labels), 1))))
 
         noise = sample_noise(len(labels))
@@ -95,7 +95,7 @@ def train_metagan(trainLoader, testLoader, Flags):
         fake_output = net.forward(img1_fake, img2_fake)
         del noise, img1_fake, img2_fake
 
-        D_fake_pair_loss = loss_fn(fake_output[:, 0].view(-1, 1), label)
+        D_fake_pair_loss = loss_fn(fake_output[:, 0].view(-1, 1), labels)
         D_fake_pair_loss.backward()
         D_optimizer.step()
         del D_fake_pair_loss, fake_output
