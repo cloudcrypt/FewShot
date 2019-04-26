@@ -18,8 +18,6 @@ def train_siamese(omniglot_loader, Flags):
     if torch.cuda.is_available():
         net.cuda()
 
-    net.train()
-
     optimizer = torch.optim.Adam(net.parameters(), lr=Flags.lr)
     optimizer.zero_grad()
 
@@ -32,6 +30,8 @@ def train_siamese(omniglot_loader, Flags):
     best_accuracy_iteration = 0
 
     for iteration in range(Flags.max_iter):
+        net.train()
+
         images, labels = omniglot_loader.get_train_batch()
         img1, img2, label = to_var(images[0]), to_var(images[1]), to_var(labels)
 
@@ -46,9 +46,9 @@ def train_siamese(omniglot_loader, Flags):
             iteration, loss_val / Flags.show_every, time.time() - time_start))
             loss_val = 0
             time_start = time.time()
-        if iteration % Flags.save_every == 0:
-            torch.save(net.state_dict(), Flags.model_path + '/model-inter-' + str(iteration + 1) + ".pt")
         if iteration % Flags.test_every == 0:
+            net.eval()
+
             global_accuracy = 0.0
             number_of_runs_per_alphabet = 40
             validation_accuracy = omniglot_loader.one_shot_test(
@@ -57,7 +57,7 @@ def train_siamese(omniglot_loader, Flags):
             if validation_accuracy > best_validation_accuracy:
                 if not os.path.exists(Flags.model_path):
                     os.makedirs(Flags.model_path)
-                torch.save(net.state_dict(), Flags.model_path + "/best_siamese_model.pt")
+                torch.save(net, Flags.model_path + "/best_siamese_model.pt")
 
                 best_validation_accuracy = validation_accuracy
                 best_accuracy_iteration = iteration
@@ -100,6 +100,7 @@ if __name__ == '__main__':
     print("Best validation accuracy:" + str(acc))
 
     model = torch.load(Flags.model_path + "/best_siamese_model.pt")
+    model.eval()
     evaluation_accuracy = omniglot_loader.one_shot_test(model, 20, 40, False)
 
     print('Final Evaluation Accuracy = ' + str(evaluation_accuracy))
