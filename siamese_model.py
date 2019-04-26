@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class SiameseNetwork(nn.Module) :
     def __init__(self):
         super(SiameseNetwork,self).__init__()
