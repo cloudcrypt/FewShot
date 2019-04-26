@@ -165,7 +165,7 @@ if __name__ == '__main__':
         transforms.ToTensor()
     ])
 
-    trainSet = OmniglotTrain(Flags.train_path, batch_size=8, transform=data_transforms)
+    trainSet = OmniglotTrain(Flags.train_path, transform=data_transforms)
     testSet = OmniglotTest(Flags.test_path, transform=transforms.ToTensor(), times=Flags.times, way=Flags.way)
     testLoader = DataLoader(testSet, batch_size=Flags.way, shuffle=False, num_workers=Flags.workers)
 

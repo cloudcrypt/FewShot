@@ -64,7 +64,7 @@ class OmniglotLoader:
 
 class OmniglotTrain(Dataset):
 
-    def __init__(self, dataPath, batch_size=8, transform=None):
+    def __init__(self, dataPath, transform=None):
         super(OmniglotTrain, self).__init__()
 
         loader = OmniglotLoader(dataPath)
@@ -74,8 +74,6 @@ class OmniglotTrain(Dataset):
         # self.dataset = dataset
         self.transform = transform
         self.datas, self.num_classes = self.loadToMem(os.path.join(loader.dataset_path, loader.processed_folder, 'images_background'))
-        self.batch_size = batch_size
-
 
     def loadToMem(self, dataPath):
         print("begin loading training dataset to memory")
@@ -98,31 +96,30 @@ class OmniglotTrain(Dataset):
 
     def __getitem__(self, index):
         # image1 = random.choice(self.dataset.imgs)
-        labels = torch.zeros(self.batch_size)
-        img1 = torch.zeros(self.batch_size, 1, 105, 105)
-        img2 = torch.zeros(self.batch_size, 1, 105, 105)
-        for i in range(self.batch_size):
-            if i % 2 == 1:
-                idx1 = random.randint(0, self.num_classes - 1)
-                idx2 = idx1
-                labels[i] = 1.0
-            else:
-                idx1 = random.randint(0, self.num_classes - 1)
+        label = None
+        img1 = None
+        img2 = None
+        # get image from same class
+        if index % 2 == 1:
+            label = 1.0
+            idx1 = random.randint(0, self.num_classes - 1)
+            image1 = random.choice(self.datas[idx1])
+            image2 = random.choice(self.datas[idx1])
+        # get image from different class
+        else:
+            label = 0.0
+            idx1 = random.randint(0, self.num_classes - 1)
+            idx2 = random.randint(0, self.num_classes - 1)
+            while idx1 == idx2:
                 idx2 = random.randint(0, self.num_classes - 1)
-                labels[i] = 0.0
-                while idx1 == idx2:
-                    idx2 = random.randint(0, self.num_classes - 1)
-
             image1 = random.choice(self.datas[idx1])
             image2 = random.choice(self.datas[idx2])
-            if self.transform:
-                image1 = self.transform(image1)
-                image2 = self.transform(image2)
 
-            img1[i] = image1
-            img2[i] = image2
+        if self.transform:
+            image1 = self.transform(image1)
+            image2 = self.transform(image2)
 
-        return img1, img2, labels
+        return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
 
 
 class OmniglotTest(Dataset):
@@ -170,7 +167,7 @@ class OmniglotTest(Dataset):
 
         test_image = transf(self.datas[test_class][image_indices[0]])
 
-        images1[0] = transf(self.datas[test_class][image_indices[1]])
+        images1[0] = transf(self.datas[test_class][image_indeices[1]])
 
         available_classes = list(range(0, self.num_classes))
         available_classes.remove(test_class)
