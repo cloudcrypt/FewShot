@@ -23,6 +23,7 @@ def train_metagan(omniglot_loader, Flags):
     if torch.cuda.is_available():
         print("Using CUDA")
         net.cuda()
+        generator.cuda()
 
     D_optimizer = torch.optim.Adam(net.parameters(), lr=Flags.lr, betas=[Flags.beta1, Flags.beta2])
     G_optimizer = torch.optim.Adam(generator.parameters(), lr=Flags.lr, betas=[Flags.beta1, Flags.beta2])
@@ -50,14 +51,14 @@ def train_metagan(omniglot_loader, Flags):
         output = net.forward(img1, img2)
 
         D_real_pair_loss = loss_fn(output[:, 0].view(-1, 1), label)
-        D_real_disrcim_loss = loss_fn(output[:, 1].view(-1, 1), torch.ones((len(labels), 1)))
+        D_real_disrcim_loss = loss_fn(output[:, 1].view(-1, 1), to_var(torch.ones((len(labels), 1))))
 
         noise = sample_noise(len(labels))
         img1_fake = generator.forward(img1, noise)
         img2_fake = generator.forward(img2, noise)
         fake_output = net.forward(img1_fake, img2_fake)
 
-        D_fake_discrim_loss = loss_fn(fake_output[:, 1].view(-1, 1), torch.zeros((len(labels), 1)))
+        D_fake_discrim_loss = loss_fn(fake_output[:, 1].view(-1, 1), to_var(torch.zeros((len(labels), 1))))
 
         D_total_loss = D_real_pair_loss + D_real_disrcim_loss + D_fake_discrim_loss
         loss_val += D_total_loss
@@ -71,7 +72,7 @@ def train_metagan(omniglot_loader, Flags):
         img2_fake = generator.forward(img2, noise)
         fake_output = net.forward(img1_fake, img2_fake)
 
-        G_loss = loss_fn(fake_output[:, 1].view(-1, 1), torch.ones((len(labels), 1)))
+        G_loss = loss_fn(fake_output[:, 1].view(-1, 1), to_var(torch.ones((len(labels), 1))))
         G_loss.backward()
         G_optimizer.step()
 
@@ -130,7 +131,7 @@ if __name__ == '__main__':
     gflags.DEFINE_float("lr", 0.001, "learning rate")
     gflags.DEFINE_float("beta1", 0.5, "beta 1")
     gflags.DEFINE_float("beta2", 0.9, "beta 2")
-    gflags.DEFINE_integer("show_every", 100, "show result after each show_every iter.")
+    gflags.DEFINE_integer("show_every", 1, "show result after each show_every iter.")
     gflags.DEFINE_integer("save_every", 1000, "save model after each save_every iter.")
     gflags.DEFINE_integer("test_every", 1000, "test model after each test_every iter.")
     gflags.DEFINE_integer("max_iter", 1000000, "number of iterations before stopping")
