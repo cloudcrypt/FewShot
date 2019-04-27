@@ -1,3 +1,5 @@
+# Implementation based from https://github.com/fangpin/siamese-pytorch
+
 import torch
 from siamese_model import *
 import time

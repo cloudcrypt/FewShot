@@ -1,3 +1,5 @@
+# Implementation based from https://github.com/Goldesel23/Siamese-Networks-for-One-Shot-Learning
+
 import os
 import random
 import numpy as np

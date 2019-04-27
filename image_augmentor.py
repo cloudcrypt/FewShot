@@ -1,3 +1,5 @@
+# Implementation taken from https://github.com/Goldesel23/Siamese-Networks-for-One-Shot-Learning
+
 import numpy as np
 import scipy.ndimage as ndi
 import matplotlib.pyplot as plt

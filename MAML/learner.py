@@ -1,3 +1,5 @@
+# Implementation taken from https://github.com/dragen1860/MAML-Pytorch
+
 import  torch
 from    torch import nn
 from    torch.nn import functional as F
