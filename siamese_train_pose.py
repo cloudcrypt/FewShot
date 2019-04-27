@@ -1,3 +1,5 @@
+# Implementation based from https://github.com/fangpin/siamese-pytorch
+
 import torch
 import pickle
 import torchvision

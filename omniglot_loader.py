@@ -1,3 +1,5 @@
+# Implementation based from https://github.com/fangpin/siamese-pytorch
+
 import torch
 from torch.utils.data import Dataset, DataLoader
 import os
