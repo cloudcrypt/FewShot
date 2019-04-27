@@ -9,6 +9,8 @@ To test the siamese network using our already trained model, run `python3 sm_old
 
 For training, run `python3 siamese_train.py`. 
 
+To train on pose estimation data set run `siamese_train_pose.py`
+
 # Metagan
 
 To test the metagan network using our already trained model, run `python3 metagan_evaluate.py`. The number of ways and the model used to run this can be changed within the code.
